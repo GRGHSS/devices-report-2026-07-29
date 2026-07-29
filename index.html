@@ -467,7 +467,6 @@
           <tr>
             <td>${index + 1}</td>
             <td class="device-name">${esc(row.label)}</td>
-            <td class="serial-range">${esc(row.serialRange)}</td>
             ${["total","installed","reserve","damaged","service","lost","other"].map(field => `
               <td><input class="number-input" type="number" min="0" step="1" value="${row[field]}" data-index="${index}" data-field="${field}" aria-label="${esc(row.label)} ${field}" /></td>
             `).join("")}
@@ -480,7 +479,7 @@
       function totalsRow() {
         return `
           <tr>
-            <td></td><td></td><td>Ընդամենը</td>
+            <td></td><td>Ընդամենը</td>
             ${["total","installed","reserve","damaged","service","lost","other"].map(field => `<td id="total-${field}">${nf.format(sum(rows, field))}</td>`).join("")}
             <td id="total-difference">${nf.format(rows.reduce((total, row) => total + difference(row), 0))}</td>
             <td></td>
@@ -655,7 +654,6 @@
                     <tr>
                       <th rowspan="2">№</th>
                       <th rowspan="2">Սարքատեսակ</th>
-                      <th rowspan="2">Սերիական համարների միջակայք</th>
                       <th rowspan="2">Մատակարարված սարքեր / հատ /</th>
                       <th rowspan="2">Կիրառված սարքեր / հատ /</th>
                       <th rowspan="2">Չկիրառված սարքեր / հատ /</th>
