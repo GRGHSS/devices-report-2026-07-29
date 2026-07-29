@@ -472,7 +472,7 @@
               <td><input class="number-input" type="number" min="0" step="1" value="${row[field]}" data-index="${index}" data-field="${field}" aria-label="${esc(row.label)} ${field}" /></td>
             `).join("")}
             <td><span class="difference ${difference(row) ? "bad" : ""}" id="difference-${index}">${nf.format(difference(row))}</span></td>
-            <td><input class="note-input" value="${esc(row.note)}" data-index="${index}" data-field="note" aria-label="${esc(row.label)} նշում" /></td>
+            <td><input class="note-input" value="${esc(row.note)}" data-index="${index}" data-field="note" aria-label="${esc(row.label)} վերադարձված սարքեր" /></td>
           </tr>
         `).join("");
       }
@@ -654,16 +654,16 @@
                   <thead>
                     <tr>
                       <th rowspan="2">№</th>
-                      <th rowspan="2">Սարքի տեսակ</th>
+                      <th rowspan="2">Սարքատեսակ</th>
                       <th rowspan="2">Սերիական համարների միջակայք</th>
-                      <th rowspan="2">Ընդամենը</th>
-                      <th colspan="6">Սարքերի ընթացիկ վիճակ</th>
+                      <th rowspan="2">Մատակարարված սարքեր / հատ /</th>
+                      <th rowspan="2">Կիրառված սարքեր / հատ /</th>
+                      <th rowspan="2">Չկիրառված սարքեր / հատ /</th>
+                      <th colspan="4">Պահեստում սարքերի՝ այդ թվում</th>
                       <th rowspan="2">Տարբերություն</th>
-                      <th rowspan="2">Նշում</th>
+                      <th rowspan="2">Վերադարձված սարքեր / հատ / 26.11.2025թ-ից</th>
                     </tr>
                     <tr>
-                      <th>Տեղադրված</th>
-                      <th>Պահեստ / Unknown</th>
                       <th>Վնասված</th>
                       <th>Վերանորոգում / երաշխիք</th>
                       <th>Կորուստ</th>
