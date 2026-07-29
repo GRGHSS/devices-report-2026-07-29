@@ -133,6 +133,7 @@
         min-width: 1320px;
         border-collapse: collapse;
         table-layout: fixed;
+        font-size: 14px;
       }
       th, td {
         border-right: 1px solid #dbe3e8;
@@ -145,14 +146,17 @@
         padding: 11px 8px;
         background: #1d6079;
         color: #fff;
-        font-size: 11px;
         vertical-align: middle;
       }
       thead tr:nth-child(2) th {
         padding: 8px 6px;
         background: #dfeaf0;
         color: var(--ink);
-        font-size: 10px;
+      }
+      thead th {
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.35;
       }
       th:nth-child(1) { width: 46px; }
       th:nth-child(2) { width: 96px; }
@@ -163,7 +167,7 @@
         height: 58px;
         padding: 7px 8px;
         color: #324b5d;
-        font-size: 12px;
+        font-size: 14px;
       }
       tbody tr:hover { background: #f6fafc; }
       .device-name {
