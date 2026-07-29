@@ -378,7 +378,7 @@
   <body>
     <div id="app" class="loading">Բեռնվում է տեղեկանքը…</div>
     <script>
-      const STORAGE_KEY = "devices-editable-report-2026-07-29";
+      const API_URL = "https://script.google.com/macros/s/AKfycbxvsBy1qS55GEUKDvIL8IKGPOQ38zqDG9qDvj76Cg5qRwpVzFc6174cSa5OUo31ecUkUA/exec";
       const nf = new Intl.NumberFormat("hy-AM");
       const pf = new Intl.NumberFormat("hy-AM", { style: "percent", maximumFractionDigits: 1 });
       const colors = {
@@ -532,14 +532,41 @@
             document.querySelector("#save-state").textContent = "Չպահպանված փոփոխություններ";
           });
         });
-        document.querySelector("#save").addEventListener("click", () => {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
-          document.querySelector("#save-state").textContent = "Փոփոխությունները պահպանված են";
+        document.querySelector("#save").addEventListener("click", async () => {
+          const pin = window.prompt("Մուտքագրեք խմբագրման 6-նիշ կոդը");
+          if (pin === null) return;
+
+          const saveButton = document.querySelector("#save");
+          saveButton.disabled = true;
+          document.querySelector("#save-state").textContent = "Պահպանվում է առցանց…";
+          try {
+            const response = await fetch(API_URL, {
+              method: "POST",
+              headers: { "Content-Type": "text/plain;charset=utf-8" },
+              body: JSON.stringify({ pin, rows })
+            });
+            const result = await response.json();
+            if (!result.ok) {
+              throw new Error(result.error || "SAVE_FAILED");
+            }
+            rows = structuredClone(result.rows);
+            initialRows = structuredClone(result.rows);
+            render();
+            document.querySelector("#save-state").textContent =
+              `Առցանց պահպանված է${result.updatedAt ? ` · ${result.updatedAt}` : ""}`;
+          } catch (error) {
+            const message = error.message === "INVALID_PIN"
+              ? "Խմբագրման կոդը սխալ է։"
+              : "Տվյալները չպահպանվեցին։ Ստուգեք ինտերնետ կապը և կրկին փորձեք։";
+            window.alert(message);
+            document.querySelector("#save-state").textContent = "Պահպանումը չհաջողվեց";
+            saveButton.disabled = false;
+          }
         });
         document.querySelector("#reset").addEventListener("click", () => {
-          localStorage.removeItem(STORAGE_KEY);
           rows = structuredClone(initialRows);
           render();
+          document.querySelector("#save-state").textContent = "Վերջին առցանց տվյալները վերականգնված են";
         });
         document.querySelector("#print").addEventListener("click", () => window.print());
       }
@@ -555,7 +582,7 @@
           </header>
           <main class="page">
             <section class="toolbar">
-              <div class="toolbar-status"><span class="status-dot"></span><span id="save-state">Խմբագրման տարբերակ</span></div>
+              <div class="toolbar-status" aria-live="polite"><span class="status-dot"></span><span id="save-state">Առցանց տվյալներ</span></div>
               <div class="toolbar-actions">
                 <button id="reset">Վերականգնել</button>
                 <button id="print">Տպել</button>
@@ -605,16 +632,35 @@
               </div>
             </section>
           </main>
-          <footer><span>Աղբյուր՝ Սարքեր 29.07.2026.csv</span><span>Փոփոխությունները պահվում են միայն այս դիտարկիչում</span></footer>
+          <footer><span>Աղբյուր՝ Սարքեր 29.07.2026.csv</span><span>Տվյալները համաժամացվում են Google Sheet-ի հետ</span></footer>
         `;
         bindInputs();
         updateDerived();
       }
 
-      initialRows = structuredClone(PUBLISHED_ROWS);
-      const saved = localStorage.getItem(STORAGE_KEY);
-      rows = saved ? JSON.parse(saved) : structuredClone(initialRows);
-      render();
+      async function loadOnlineData() {
+        try {
+          const response = await fetch(`${API_URL}?t=${Date.now()}`, { cache: "no-store" });
+          const result = await response.json();
+          if (!result.ok || !Array.isArray(result.rows) || result.rows.length !== 4) {
+            throw new Error("LOAD_FAILED");
+          }
+          initialRows = structuredClone(result.rows);
+          rows = structuredClone(result.rows);
+          render();
+          const updatedAt = result.rows.find(row => row.updatedAt)?.updatedAt;
+          document.querySelector("#save-state").textContent =
+            `Առցանց տվյալները բեռնված են${updatedAt ? ` · ${updatedAt}` : ""}`;
+        } catch (error) {
+          initialRows = structuredClone(PUBLISHED_ROWS);
+          rows = structuredClone(PUBLISHED_ROWS);
+          render();
+          document.querySelector("#save-state").textContent =
+            "Ցանցային տվյալները հասանելի չեն · ցուցադրվում է պահուստային տարբերակը";
+        }
+      }
+
+      loadOnlineData();
     </script>
   </body>
 </html>
