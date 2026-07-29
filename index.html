@@ -351,6 +351,30 @@
         place-content: center;
         color: var(--muted);
       }
+      .pin-dialog {
+        width: min(92vw, 380px);
+        border: 0;
+        border-radius: 8px;
+        padding: 0;
+        color: var(--ink);
+        box-shadow: 0 24px 70px rgba(20, 35, 30, 0.28);
+      }
+      .pin-dialog::backdrop { background: rgba(20, 35, 30, 0.48); }
+      .pin-form { padding: 24px; }
+      .pin-form h3 { margin: 0 0 8px; font-size: 20px; }
+      .pin-form p { margin: 0 0 18px; color: var(--muted); line-height: 1.5; }
+      .pin-form label { display: grid; gap: 8px; font-weight: 700; }
+      .pin-form input {
+        width: 100%;
+        min-height: 46px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 0 12px;
+        font: inherit;
+        letter-spacing: 0;
+      }
+      .pin-form input:focus { outline: 2px solid rgba(35, 122, 66, 0.25); border-color: var(--green); }
+      .pin-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
       @media (max-width: 980px) {
         .analysis-grid { grid-template-columns: 1fr; }
         .chart-panel + .chart-panel { border-left: 0; border-top: 1px solid var(--line); }
@@ -404,6 +428,38 @@
       })[char]);
       function difference(row) {
         return row.total - row.installed - row.reserve - row.damaged - row.service - row.lost - row.other;
+      }
+
+      function requestPin() {
+        const dialog = document.querySelector("#pin-dialog");
+        const form = document.querySelector("#pin-form");
+        const input = document.querySelector("#pin-input");
+        const cancel = document.querySelector("#pin-cancel");
+        input.value = "";
+        dialog.showModal();
+        input.focus();
+
+        return new Promise(resolve => {
+          const finish = value => {
+            form.removeEventListener("submit", submit);
+            cancel.removeEventListener("click", cancelEntry);
+            dialog.removeEventListener("cancel", cancelDialog);
+            dialog.close();
+            resolve(value);
+          };
+          const submit = event => {
+            event.preventDefault();
+            finish(input.value.trim());
+          };
+          const cancelEntry = () => finish(null);
+          const cancelDialog = event => {
+            event.preventDefault();
+            finish(null);
+          };
+          form.addEventListener("submit", submit);
+          cancel.addEventListener("click", cancelEntry);
+          dialog.addEventListener("cancel", cancelDialog);
+        });
       }
 
       function tableRows() {
@@ -533,7 +589,7 @@
           });
         });
         document.querySelector("#save").addEventListener("click", async () => {
-          const pin = window.prompt("Մուտքագրեք խմբագրման 6-նիշ կոդը");
+          const pin = await requestPin();
           if (pin === null) return;
 
           const saveButton = document.querySelector("#save");
@@ -558,8 +614,7 @@
             const message = error.message === "INVALID_PIN"
               ? "Խմբագրման կոդը սխալ է։"
               : "Տվյալները չպահպանվեցին։ Ստուգեք ինտերնետ կապը և կրկին փորձեք։";
-            window.alert(message);
-            document.querySelector("#save-state").textContent = "Պահպանումը չհաջողվեց";
+            document.querySelector("#save-state").textContent = message;
             saveButton.disabled = false;
           }
         });
@@ -632,6 +687,20 @@
               </div>
             </section>
           </main>
+          <dialog id="pin-dialog" class="pin-dialog">
+            <form id="pin-form" class="pin-form">
+              <h3>Խմբագրման հաստատում</h3>
+              <p>Տվյալները առցանց պահպանելու համար մուտքագրեք 6-նիշ PIN կոդը։</p>
+              <label>
+                PIN կոդ
+                <input id="pin-input" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off" required />
+              </label>
+              <div class="pin-actions">
+                <button id="pin-cancel" type="button">Չեղարկել</button>
+                <button class="primary" type="submit">Հաստատել</button>
+              </div>
+            </form>
+          </dialog>
           <footer><span>Աղբյուր՝ Սարքեր 29.07.2026.csv</span><span>Տվյալները համաժամացվում են Google Sheet-ի հետ</span></footer>
         `;
         bindInputs();
