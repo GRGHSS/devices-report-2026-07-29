@@ -467,11 +467,10 @@
           <tr>
             <td>${index + 1}</td>
             <td class="device-name">${esc(row.label)}</td>
-            ${["total","installed","reserve","damaged","service","lost","other"].map(field => `
+            ${["total","installed","reserve","damaged","service","other","lost"].map(field => `
               <td><input class="number-input" type="number" min="0" step="1" value="${row[field]}" data-index="${index}" data-field="${field}" aria-label="${esc(row.label)} ${field}" /></td>
             `).join("")}
             <td><span class="difference ${difference(row) ? "bad" : ""}" id="difference-${index}">${nf.format(difference(row))}</span></td>
-            <td><input class="note-input" value="${esc(row.note)}" data-index="${index}" data-field="note" aria-label="${esc(row.label)} վերադարձված սարքեր" /></td>
           </tr>
         `).join("");
       }
@@ -480,21 +479,20 @@
         return `
           <tr>
             <td></td><td>Ընդամենը</td>
-            ${["total","installed","reserve","damaged","service","lost","other"].map(field => `<td id="total-${field}">${nf.format(sum(rows, field))}</td>`).join("")}
+            ${["total","installed","reserve","damaged","service","other","lost"].map(field => `<td id="total-${field}">${nf.format(sum(rows, field))}</td>`).join("")}
             <td id="total-difference">${nf.format(rows.reduce((total, row) => total + difference(row), 0))}</td>
-            <td></td>
           </tr>
         `;
       }
 
       function donutMarkup() {
         const parts = [
-          ["Տեղադրված", sum(rows, "installed"), colors.installed],
-          ["Պահեստ / Unknown", sum(rows, "reserve"), colors.reserve],
-          ["Վնասված", sum(rows, "damaged"), colors.damaged],
-          ["Վերանորոգում / երաշխիք", sum(rows, "service"), colors.service],
-          ["Կորուստ", sum(rows, "lost"), colors.lost],
-          ["Այլ", sum(rows, "other"), colors.other]
+          ["Կիրառված", sum(rows, "installed"), colors.installed],
+          ["Չկիրառված", sum(rows, "reserve"), colors.reserve],
+          ["Պահեստում՝ սարքին", sum(rows, "damaged"), colors.damaged],
+          ["Անսարք՝ երաշխիքով", sum(rows, "service"), colors.service],
+          ["Անսարք՝ առանց երաշխիքի", sum(rows, "other"), colors.other],
+          ["Կորուստ", sum(rows, "lost"), colors.lost]
         ];
         const total = parts.reduce((value, part) => value + part[1], 0) || 1;
         let cursor = 0;
@@ -532,8 +530,8 @@
                 [row.reserve, colors.reserve],
                 [row.damaged, colors.damaged],
                 [row.service, colors.service],
-                [row.lost, colors.lost],
-                [row.other, colors.other]
+                [row.other, colors.other],
+                [row.lost, colors.lost]
               ];
               return `
                 <div>
@@ -546,12 +544,12 @@
             }).join("")}
           </div>
           <div class="stack-key">
-            <span><i style="background:${colors.installed}"></i>Տեղադրված</span>
-            <span><i style="background:${colors.reserve}"></i>Պահեստ / Unknown</span>
-            <span><i style="background:${colors.damaged}"></i>Վնասված</span>
-            <span><i style="background:${colors.service}"></i>Վերանորոգում / երաշխիք</span>
+            <span><i style="background:${colors.installed}"></i>Կիրառված</span>
+            <span><i style="background:${colors.reserve}"></i>Չկիրառված</span>
+            <span><i style="background:${colors.damaged}"></i>Պահեստում՝ սարքին</span>
+            <span><i style="background:${colors.service}"></i>Անսարք՝ երաշխիքով</span>
+            <span><i style="background:${colors.other}"></i>Անսարք՝ առանց երաշխիքի</span>
             <span><i style="background:${colors.lost}"></i>Կորուստ</span>
-            <span><i style="background:${colors.other}"></i>Այլ</span>
           </div>
         `;
       }
@@ -652,20 +650,22 @@
                 <table>
                   <thead>
                     <tr>
-                      <th rowspan="2">№</th>
-                      <th rowspan="2">Սարքատեսակ</th>
-                      <th rowspan="2">Մատակարարված սարքեր / հատ /</th>
-                      <th rowspan="2">Կիրառված սարքեր / հատ /</th>
-                      <th rowspan="2">Չկիրառված սարքեր / հատ /</th>
-                      <th colspan="4">Պահեստում սարքերի՝ այդ թվում</th>
-                      <th rowspan="2">Տարբերություն</th>
-                      <th rowspan="2">Վերադարձված սարքեր / հատ / 26.11.2025թ-ից</th>
+                      <th rowspan="3">№</th>
+                      <th rowspan="3">Սարքատեսակ</th>
+                      <th rowspan="3">Մատակարարված սարքեր / հատ /</th>
+                      <th rowspan="3">Կիրառված սարքեր / հատ /</th>
+                      <th rowspan="3">Չկիրառված սարքեր / հատ /</th>
+                      <th colspan="3">Պահեստում սարքերի՝ այդ թվում</th>
+                      <th rowspan="3">Կորուստ</th>
+                      <th rowspan="3">Տարբերություն</th>
                     </tr>
                     <tr>
-                      <th>Վնասված</th>
-                      <th>Վերանորոգում / երաշխիք</th>
-                      <th>Կորուստ</th>
-                      <th>Այլ</th>
+                      <th rowspan="2">Սարքին</th>
+                      <th colspan="2">Անսարք</th>
+                    </tr>
+                    <tr>
+                      <th>Երաշխիքով</th>
+                      <th>Առանց երաշխիքի</th>
                     </tr>
                   </thead>
                   <tbody>${tableRows()}</tbody>
