@@ -455,6 +455,7 @@
       ];
       let rows = [];
       let initialRows = [];
+      let reportDate = "29.07.2026";
 
       const sum = (items, field) => items.reduce((total, row) => total + Number(row[field] || 0), 0);
       const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
@@ -462,6 +463,11 @@
       })[char]);
       function difference(row) {
         return row.total - row.installed - row.reserve - row.damaged - row.service - row.lost - row.other;
+      }
+
+      function updateReportDate(updatedAt) {
+        const date = String(updatedAt || "").match(/^\d{2}\.\d{2}\.\d{4}/)?.[0];
+        if (date) reportDate = date;
       }
 
       function requestPin() {
@@ -638,6 +644,7 @@
             }
             rows = structuredClone(result.rows);
             initialRows = structuredClone(result.rows);
+            updateReportDate(result.updatedAt || result.rows.find(row => row.updatedAt)?.updatedAt);
             render();
             document.querySelector("#save-state").textContent =
               `Առցանց պահպանված է${result.updatedAt ? ` · ${result.updatedAt}` : ""}`;
@@ -658,12 +665,13 @@
       }
 
       function render() {
+        document.title = `Տեղեկանք սարքերի վերաբերյալ | ${reportDate}`;
         document.querySelector("#app").className = "";
         document.querySelector("#app").innerHTML = `
           <header class="app-header">
             <div class="header-inner">
               <div><p>Էլեկտրոնային մոնիթորինգ</p><h1>Սարքերի հաշվետվություն</h1></div>
-              <div class="header-date"><span>Դրությունը</span><strong>29.07.2026</strong></div>
+              <div class="header-date"><span>Դրությունը</span><strong>${reportDate}</strong></div>
             </div>
           </header>
           <main class="page">
@@ -678,7 +686,7 @@
             <section class="document">
               <div class="document-heading">
                 <h2>Տեղեկանք</h2>
-                <p>Էլեկտրոնային սարքավորումների վերաբերյալ՝ 29.07.2026 դրությամբ</p>
+                <p>Էլեկտրոնային սարքավորումների վերաբերյալ՝ ${reportDate} դրությամբ</p>
               </div>
               <div class="table-scroll">
                 <table>
@@ -748,8 +756,9 @@
           }
           initialRows = structuredClone(result.rows);
           rows = structuredClone(result.rows);
+          const updatedAt = result.updatedAt || result.rows.find(row => row.updatedAt)?.updatedAt;
+          updateReportDate(updatedAt);
           render();
-          const updatedAt = result.rows.find(row => row.updatedAt)?.updatedAt;
           document.querySelector("#save-state").textContent =
             `Առցանց տվյալները բեռնված են${updatedAt ? ` · ${updatedAt}` : ""}`;
         } catch (error) {
