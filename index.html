@@ -471,6 +471,13 @@
         if (date) reportDate = date;
       }
 
+      function normalizeRows(items) {
+        return structuredClone(items).map(row => ({
+          ...row,
+          note: Math.max(0, Number(row.note || 0))
+        }));
+      }
+
       function requestPin() {
         const dialog = document.querySelector("#pin-dialog");
         const form = document.querySelector("#pin-form");
@@ -511,7 +518,7 @@
             ${["total","installed","reserve","damaged","service","other","lost"].map(field => `
               <td><input class="number-input" type="number" min="0" step="1" value="${row[field]}" data-index="${index}" data-field="${field}" aria-label="${esc(row.label)} ${field}" /></td>
             `).join("")}
-            <td><input class="note-input" value="${esc(row.note)}" data-index="${index}" data-field="note" aria-label="${esc(row.label)} օգնություն" /></td>
+            <td><input class="number-input" type="number" min="0" step="1" value="${Math.max(0, Number(row.note || 0))}" data-index="${index}" data-field="note" aria-label="${esc(row.label)} օգնություն" /></td>
             <td><span class="difference ${difference(row) ? "bad" : ""}" id="difference-${index}">${nf.format(difference(row))}</span></td>
           </tr>
         `).join("");
@@ -522,7 +529,7 @@
           <tr>
             <td></td><td>Ընդամենը</td>
             ${["total","installed","reserve","damaged","service","other","lost"].map(field => `<td id="total-${field}">${nf.format(sum(rows, field))}</td>`).join("")}
-            <td></td>
+            <td id="total-note">${nf.format(sum(rows, "note"))}</td>
             <td id="total-difference">${nf.format(rows.reduce((total, row) => total + difference(row), 0))}</td>
           </tr>
         `;
@@ -601,6 +608,7 @@
         ["total","installed","reserve","damaged","service","lost","other"].forEach(field => {
           document.querySelector(`#total-${field}`).textContent = nf.format(sum(rows, field));
         });
+        document.querySelector("#total-note").textContent = nf.format(sum(rows, "note"));
         rows.forEach((row, index) => {
           const cell = document.querySelector(`#difference-${index}`);
           const value = difference(row);
@@ -623,7 +631,7 @@
           input.addEventListener("input", event => {
             const index = Number(event.target.dataset.index);
             const field = event.target.dataset.field;
-            rows[index][field] = field === "note" ? event.target.value : Math.max(0, Number(event.target.value || 0));
+            rows[index][field] = Math.max(0, Number(event.target.value || 0));
             updateDerived();
             document.querySelector("#save-state").textContent = "Չպահպանված փոփոխություններ";
           });
@@ -645,8 +653,8 @@
             if (!result.ok) {
               throw new Error(result.error || "SAVE_FAILED");
             }
-            rows = structuredClone(result.rows);
-            initialRows = structuredClone(result.rows);
+            rows = normalizeRows(result.rows);
+            initialRows = normalizeRows(result.rows);
             updateReportDate(result.updatedAt || result.rows.find(row => row.updatedAt)?.updatedAt);
             render();
             document.querySelector("#save-state").textContent =
@@ -758,16 +766,16 @@
           if (!result.ok || !Array.isArray(result.rows) || result.rows.length !== 4) {
             throw new Error("LOAD_FAILED");
           }
-          initialRows = structuredClone(result.rows);
-          rows = structuredClone(result.rows);
+          initialRows = normalizeRows(result.rows);
+          rows = normalizeRows(result.rows);
           const updatedAt = result.updatedAt || result.rows.find(row => row.updatedAt)?.updatedAt;
           updateReportDate(updatedAt);
           render();
           document.querySelector("#save-state").textContent =
             `Առցանց տվյալները բեռնված են${updatedAt ? ` · ${updatedAt}` : ""}`;
         } catch (error) {
-          initialRows = structuredClone(PUBLISHED_ROWS);
-          rows = structuredClone(PUBLISHED_ROWS);
+          initialRows = normalizeRows(PUBLISHED_ROWS);
+          rows = normalizeRows(PUBLISHED_ROWS);
           render();
           document.querySelector("#save-state").textContent =
             "Ցանցային տվյալները հասանելի չեն · ցուցադրվում է պահուստային տարբերակը";
