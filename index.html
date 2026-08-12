@@ -537,12 +537,6 @@
       }
 
       function exportExcel() {
-        if (!window.XLSX) {
-          document.querySelector("#save-state").textContent =
-            "Excel արտահանումը հասանելի չէ · ստուգեք ինտերնետ կապը";
-          return;
-        }
-
         const headers = [
           "№",
           "Սարքատեսակ",
@@ -582,6 +576,50 @@
           sum(rows, "note"),
           rows.reduce((total, row) => total + difference(row), 0)
         ];
+        const filename = `Սարքերի հաշվետվություն ${reportDate.replaceAll(".", "-")}`;
+
+        if (!window.XLSX) {
+          const xmlEsc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"
+          })[char]);
+          const cell = (value, style = "Cell") => {
+            const type = typeof value === "number" ? "Number" : "String";
+            return `<Cell ss:StyleID="${style}"><Data ss:Type="${type}">${xmlEsc(value)}</Data></Cell>`;
+          };
+          const rowXml = (values, style) =>
+            `<Row>${values.map(value => cell(value, style)).join("")}</Row>`;
+          const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Cell"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Arial" ss:Size="11"/></Style>
+  <Style ss:ID="Title"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Arial" ss:Size="16" ss:Bold="1"/></Style>
+  <Style ss:ID="Header"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Arial" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#DCEAF0" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="Total"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Arial" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#EDF3F6" ss:Pattern="Solid"/></Style>
+ </Styles>
+ <Worksheet ss:Name="Սարքերի հաշվետվություն"><Table>
+  <Row><Cell ss:MergeAcross="10" ss:StyleID="Title"><Data ss:Type="String">Սարքերի հաշվետվություն</Data></Cell></Row>
+  <Row><Cell ss:MergeAcross="10" ss:StyleID="Cell"><Data ss:Type="String">Դրությունը՝ ${xmlEsc(reportDate)}</Data></Cell></Row>
+  <Row></Row>
+  ${rowXml(headers, "Header")}
+  ${dataRows.map(values => rowXml(values, "Cell")).join("")}
+  ${rowXml(totals, "Total")}
+ </Table></Worksheet>
+</Workbook>`;
+          const blob = new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `${filename}.xls`;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          document.querySelector("#save-state").textContent = "Excel ֆայլը արտահանված է";
+          return;
+        }
+
         const worksheet = XLSX.utils.aoa_to_sheet([
           ["Սարքերի հաշվետվություն"],
           [`Դրությունը՝ ${reportDate}`],
@@ -602,7 +640,7 @@
 
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Սարքերի հաշվետվություն");
-        XLSX.writeFile(workbook, `Սարքերի հաշվետվություն ${reportDate.replaceAll(".", "-")}.xlsx`);
+        XLSX.writeFile(workbook, `${filename}.xlsx`);
         document.querySelector("#save-state").textContent = "Excel ֆայլը արտահանված է";
       }
 
