@@ -390,7 +390,7 @@
         .header-inner { min-height: 88px; }
         .header-inner h1 { font-size: 20px; }
         .toolbar { align-items: flex-start; flex-direction: column; }
-        .toolbar-actions { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); }
+        .toolbar-actions { width: 100%; display: grid; grid-template-columns: repeat(2, 1fr); }
         .donut-layout { grid-template-columns: 1fr; }
         .validation, footer { flex-direction: column; }
       }
@@ -433,6 +433,7 @@
         @page { size: A4 landscape; margin: 7mm; }
       }
     </style>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   </head>
   <body>
     <div id="app" class="loading">Բեռնվում է տեղեկանքը…</div>
@@ -533,6 +534,76 @@
             <td id="total-difference">${nf.format(rows.reduce((total, row) => total + difference(row), 0))}</td>
           </tr>
         `;
+      }
+
+      function exportExcel() {
+        if (!window.XLSX) {
+          document.querySelector("#save-state").textContent =
+            "Excel արտահանումը հասանելի չէ · ստուգեք ինտերնետ կապը";
+          return;
+        }
+
+        const headers = [
+          "№",
+          "Սարքատեսակ",
+          "Մատակարարված սարքեր / հատ /",
+          "Կիրառված սարքեր / հատ /",
+          "Չկիրառված սարքեր / հատ /",
+          "Պահեստում՝ սարքին",
+          "Անսարք՝ երաշխիքով",
+          "Անսարք՝ առանց երաշխիքի",
+          "Կորուստ",
+          "Օգնություն",
+          "Տարբերություն"
+        ];
+        const dataRows = rows.map((row, index) => [
+          index + 1,
+          row.label,
+          Number(row.total || 0),
+          Number(row.installed || 0),
+          Number(row.reserve || 0),
+          Number(row.damaged || 0),
+          Number(row.service || 0),
+          Number(row.other || 0),
+          Number(row.lost || 0),
+          Number(row.note || 0),
+          difference(row)
+        ]);
+        const totals = [
+          "",
+          "Ընդամենը",
+          sum(rows, "total"),
+          sum(rows, "installed"),
+          sum(rows, "reserve"),
+          sum(rows, "damaged"),
+          sum(rows, "service"),
+          sum(rows, "other"),
+          sum(rows, "lost"),
+          sum(rows, "note"),
+          rows.reduce((total, row) => total + difference(row), 0)
+        ];
+        const worksheet = XLSX.utils.aoa_to_sheet([
+          ["Սարքերի հաշվետվություն"],
+          [`Դրությունը՝ ${reportDate}`],
+          [],
+          headers,
+          ...dataRows,
+          totals
+        ]);
+        worksheet["!merges"] = [
+          XLSX.utils.decode_range("A1:K1"),
+          XLSX.utils.decode_range("A2:K2")
+        ];
+        worksheet["!cols"] = [
+          { wch: 5 }, { wch: 14 }, { wch: 24 }, { wch: 20 }, { wch: 22 },
+          { wch: 20 }, { wch: 22 }, { wch: 25 }, { wch: 12 }, { wch: 14 }, { wch: 14 }
+        ];
+        worksheet["!autofilter"] = { ref: `A4:K${4 + dataRows.length}` };
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Սարքերի հաշվետվություն");
+        XLSX.writeFile(workbook, `Սարքերի հաշվետվություն ${reportDate.replaceAll(".", "-")}.xlsx`);
+        document.querySelector("#save-state").textContent = "Excel ֆայլը արտահանված է";
       }
 
       function donutMarkup() {
@@ -673,6 +744,7 @@
           document.querySelector("#save-state").textContent = "Վերջին առցանց տվյալները վերականգնված են";
         });
         document.querySelector("#print").addEventListener("click", () => window.print());
+        document.querySelector("#excel").addEventListener("click", exportExcel);
       }
 
       function render() {
@@ -691,6 +763,7 @@
               <div class="toolbar-actions">
                 <button id="reset">Վերականգնել</button>
                 <button id="print">Տպել</button>
+                <button id="excel">Excel արտահանել</button>
                 <button id="save" class="primary">Պահպանել</button>
               </div>
             </section>
