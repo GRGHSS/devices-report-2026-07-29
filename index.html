@@ -433,7 +433,7 @@
         @page { size: A4 landscape; margin: 7mm; }
       }
     </style>
-    <script defer src="./xlsx.full.min.js"></script>
+    <script defer src="./exceljs.min.js"></script>
   </head>
   <body>
     <div id="app" class="loading">Բեռնվում է տեղեկանքը…</div>
@@ -536,7 +536,7 @@
         `;
       }
 
-      function exportExcel() {
+      async function exportExcel() {
         const headers = [
           "№",
           "Սարքատեսակ",
@@ -577,71 +577,81 @@
           rows.reduce((total, row) => total + difference(row), 0)
         ];
         const filename = `Սարքերի հաշվետվություն ${reportDate.replaceAll(".", "-")}`;
-
-        if (!window.XLSX) {
-          const xmlEsc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
-            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"
-          })[char]);
-          const cell = (value, style = "Cell") => {
-            const type = typeof value === "number" ? "Number" : "String";
-            return `<Cell ss:StyleID="${style}"><Data ss:Type="${type}">${xmlEsc(value)}</Data></Cell>`;
-          };
-          const rowXml = (values, style) =>
-            `<Row>${values.map(value => cell(value, style)).join("")}</Row>`;
-          const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
- <Styles>
-  <Style ss:ID="Cell"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Arial" ss:Size="11"/></Style>
-  <Style ss:ID="Title"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Arial" ss:Size="16" ss:Bold="1"/></Style>
-  <Style ss:ID="Header"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Arial" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#DCEAF0" ss:Pattern="Solid"/></Style>
-  <Style ss:ID="Total"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Arial" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#EDF3F6" ss:Pattern="Solid"/></Style>
- </Styles>
- <Worksheet ss:Name="Սարքերի հաշվետվություն"><Table>
-  <Row><Cell ss:MergeAcross="10" ss:StyleID="Title"><Data ss:Type="String">Սարքերի հաշվետվություն</Data></Cell></Row>
-  <Row><Cell ss:MergeAcross="10" ss:StyleID="Cell"><Data ss:Type="String">Դրությունը՝ ${xmlEsc(reportDate)}</Data></Cell></Row>
-  <Row></Row>
-  ${rowXml(headers, "Header")}
-  ${dataRows.map(values => rowXml(values, "Cell")).join("")}
-  ${rowXml(totals, "Total")}
- </Table></Worksheet>
-</Workbook>`;
-          const blob = new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8" });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `${filename}.xls`;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-          document.querySelector("#save-state").textContent = "Excel ֆայլը արտահանված է";
+        if (!window.ExcelJS) {
+          document.querySelector("#save-state").textContent =
+            "Excel արտահանումը պատրաստ չէ · թարմացրեք էջը և կրկին փորձեք";
           return;
         }
 
-        const worksheet = XLSX.utils.aoa_to_sheet([
-          ["Սարքերի հաշվետվություն"],
-          [`Դրությունը՝ ${reportDate}`],
-          [],
-          headers,
-          ...dataRows,
-          totals
-        ]);
-        worksheet["!merges"] = [
-          XLSX.utils.decode_range("A1:K1"),
-          XLSX.utils.decode_range("A2:K2")
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = "Սարքերի հաշվետվություն";
+        workbook.created = new Date();
+        const worksheet = workbook.addWorksheet("Սարքերի հաշվետվություն", {
+          views: [{ state: "frozen", ySplit: 4, showGridLines: true }],
+          pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
+        });
+        worksheet.columns = [
+          { width: 6 }, { width: 18 }, { width: 24 }, { width: 18 }, { width: 20 },
+          { width: 18 }, { width: 20 }, { width: 23 }, { width: 12 }, { width: 14 }, { width: 15 }
         ];
-        worksheet["!cols"] = [
-          { wch: 5 }, { wch: 14 }, { wch: 24 }, { wch: 20 }, { wch: 22 },
-          { wch: 20 }, { wch: 22 }, { wch: 25 }, { wch: 12 }, { wch: 14 }, { wch: 14 }
-        ];
-        worksheet["!autofilter"] = { ref: `A4:K${4 + dataRows.length}` };
 
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Սարքերի հաշվետվություն");
-        XLSX.writeFile(workbook, `${filename}.xlsx`);
-        document.querySelector("#save-state").textContent = "Excel ֆայլը արտահանված է";
+        worksheet.mergeCells("A1:K1");
+        worksheet.getCell("A1").value = "Սարքերի հաշվետվություն";
+        worksheet.getCell("A1").font = { name: "Arial", size: 15, bold: true };
+        worksheet.getCell("A1").alignment = { horizontal: "left", vertical: "middle" };
+        worksheet.getRow(1).height = 24;
+
+        worksheet.mergeCells("A2:K2");
+        worksheet.getCell("A2").value = `Դրությունը՝ ${reportDate}`;
+        worksheet.getCell("A2").font = { name: "Arial", size: 11 };
+        worksheet.getCell("A2").alignment = { horizontal: "left", vertical: "middle" };
+        worksheet.getRow(2).height = 20;
+        worksheet.getRow(3).height = 10;
+
+        const headerRow = worksheet.getRow(4);
+        headerRow.values = headers;
+        headerRow.height = 58;
+        headerRow.eachCell(cell => {
+          cell.font = { name: "Arial", size: 11, bold: false };
+          cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+        });
+
+        dataRows.forEach(values => worksheet.addRow(values));
+        const totalRow = worksheet.addRow(totals);
+        totalRow.font = { name: "Arial", size: 11, bold: true };
+
+        const firstTableRow = 4;
+        const lastTableRow = totalRow.number;
+        const thinBorder = { style: "thin", color: { argb: "FF000000" } };
+        for (let rowNumber = firstTableRow; rowNumber <= lastTableRow; rowNumber += 1) {
+          const row = worksheet.getRow(rowNumber);
+          row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
+            cell.border = { top: thinBorder, left: thinBorder, bottom: thinBorder, right: thinBorder };
+            cell.font = { ...cell.font, name: "Arial", size: 11 };
+            cell.alignment = {
+              horizontal: rowNumber === firstTableRow ? "center" : columnNumber === 2 ? "left" : "right",
+              vertical: "middle",
+              wrapText: rowNumber === firstTableRow
+            };
+          });
+          if (rowNumber > firstTableRow) row.height = 21;
+        }
+        totalRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2F2F2" } };
+        worksheet.autoFilter = { from: "A4", to: `K${4 + dataRows.length}` };
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${filename}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        document.querySelector("#save-state").textContent = "Ձևավորված Excel ֆայլը արտահանված է";
       }
 
       function donutMarkup() {
@@ -782,7 +792,13 @@
           document.querySelector("#save-state").textContent = "Վերջին առցանց տվյալները վերականգնված են";
         });
         document.querySelector("#print").addEventListener("click", () => window.print());
-        document.querySelector("#excel").addEventListener("click", exportExcel);
+        document.querySelector("#excel").addEventListener("click", () => {
+          document.querySelector("#save-state").textContent = "Excel ֆայլը պատրաստվում է…";
+          exportExcel().catch(() => {
+            document.querySelector("#save-state").textContent =
+              "Excel արտահանումը չհաջողվեց · կրկին փորձեք";
+          });
+        });
       }
 
       function render() {
